@@ -1,0 +1,1 @@
+docker build -t thomasloven/hass-custom-devcontainer .
