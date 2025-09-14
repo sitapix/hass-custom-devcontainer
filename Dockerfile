@@ -1,12 +1,12 @@
-#FROM homeassistant/home-assistant:dev
-FROM mcr.microsoft.com/devcontainers/python:1-3.13
+ARG PYTHON_VERSION=3.13 # homeassistant==2025.3.4 requires Python>=3.13.0
+FROM mcr.microsoft.com/devcontainers/python:1-${PYTHON_VERSION} AS base
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN \
-    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
-    && apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+# Install system dependencies (grouped) and upgrade pip tooling.
+RUN set -eux; \
+    apt-get update; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         bluez \
         libffi-dev \
         libssl-dev \
@@ -22,30 +22,35 @@ RUN \
         liblapack3 \
         liblapack-dev \
         libatlas-base-dev \
-        \
         git \
-        libpcap-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && source /usr/local/share/nvm/nvm.sh \
-    && nvm install lts/iron \
-    && pip install --upgrade wheel pip
+        libpcap-dev; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*; \
+    pip install --no-cache-dir --upgrade pip wheel setuptools; \
+    pip install --no-cache-dir uv
 
 COPY --from=ghcr.io/alexxit/go2rtc:latest /usr/local/bin/go2rtc /bin/go2rtc
-RUN pip3 install uv
 
 EXPOSE 8123
 
 VOLUME /config
+RUN set -eux; \
+    mkdir -p /config; \
+    chown vscode:vscode /config
 
 USER vscode
 ENV VIRTUAL_ENV="/home/vscode/.local/ha-venv"
-RUN uv venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-COPY requirements.txt /tmp/requirements.txt
-RUN uv pip install -r /tmp/requirements.txt
-COPY container /usr/bin
-COPY hassfest /usr/bin
+# Create and populate virtual environment in one layer for caching.
+# Create virtual environment (dependencies installed at runtime for flexibility / reduced build breakage)
+RUN set -eux; \
+    uv venv $VIRTUAL_ENV; \
+    $VIRTUAL_ENV/bin/python -m ensurepip --upgrade; \
+    $VIRTUAL_ENV/bin/python -m pip install --no-cache-dir --upgrade pip wheel setuptools; \
+    echo 'Deferred Home Assistant installation to container start (see container script).'
 
-CMD sudo -E container
+COPY --chown=vscode:vscode container /usr/bin/container
+COPY --chown=vscode:vscode hassfest /usr/bin/hassfest
+
+ENTRYPOINT ["container"]

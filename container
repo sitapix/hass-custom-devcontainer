@@ -2,6 +2,34 @@
 
 plugins=
 
+function ensure_homeassistant() {
+    if command -v hass >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local version_msg="(latest)"
+    if [[ -n "${HA_VERSION:-}" ]]; then
+        echo "Installing Home Assistant version ${HA_VERSION}"
+        python -m pip install --no-cache-dir "homeassistant==${HA_VERSION}" || {
+            echo "[warn] Failed to install requested Home Assistant version ${HA_VERSION}. Falling back to latest." >&2
+            python -m pip install --no-cache-dir homeassistant
+        }
+        version_msg="(${HA_VERSION} requested)"
+    elif [[ -f "/config/requirements.txt" ]]; then
+        echo "Installing Home Assistant from /config/requirements.txt"
+        python -m pip install --no-cache-dir -r /config/requirements.txt || {
+            echo "[warn] Failed to install from /config/requirements.txt. Falling back to 'homeassistant' latest." >&2
+            python -m pip install --no-cache-dir homeassistant
+        }
+        version_msg="(requirements.txt)"
+    else
+        echo "Installing Home Assistant (latest)"
+        python -m pip install --no-cache-dir homeassistant
+    fi
+
+    echo "Home Assistant installation complete ${version_msg}";
+}
+
 function ensure_hass_config() {
     hass --script ensure_config -c /config
 }
@@ -101,6 +129,7 @@ function install_hacs() {
 }
 
 function setup() {
+    ensure_homeassistant
     ensure_hass_config
     create_hass_user
     bypass_onboarding
