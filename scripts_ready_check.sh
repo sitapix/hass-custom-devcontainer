@@ -107,7 +107,8 @@ while (( $(date +%s) < deadline )); do
   api_code=""
   if [[ $CHECK_API -eq 1 ]]; then
     api_code=$(curl -fsS -o /dev/null -w '%{http_code}' "${URL%/}/api/" || true)
-    if [[ "$api_code" == "200" ]]; then
+    # 200 = ready, 401 = starting but needs auth (acceptable), other codes = not ready
+    if [[ "$api_code" == "200" || "$api_code" == "401" ]]; then
       pass_api=1
     fi
   fi

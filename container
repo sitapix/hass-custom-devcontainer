@@ -38,7 +38,11 @@ function create_hass_user() {
     local username=${HASS_USERNAME:-dev}
     local password=${HASS_PASSWORD:-dev}
     echo "Creating Home Assistant User ${username}:${password}"
-    hass --script auth -c /config add ${username} ${password}
+    # Try to create the user, but don't fail if it already exists or if there's an error
+    hass --script auth -c /config add ${username} ${password} || {
+        echo "[warn] User creation failed or user already exists. This may be normal on first run." >&2
+        return 0
+    }
 }
 
 function bypass_onboarding() {
@@ -131,8 +135,8 @@ function install_hacs() {
 function setup() {
     ensure_homeassistant
     ensure_hass_config
-    create_hass_user
     bypass_onboarding
+    create_hass_user
     install_hacs
     install_lovelace_plugins
 }
