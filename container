@@ -77,8 +77,8 @@ function fetch_lovelace_plugins() {
         fi
 
         echo "Downloading ${plugin} to ${file}.js"
-        curl https://raw.githubusercontent.com/${author}/${repo}/master/dist/${file}.js --output /config/www/${file}.js --fail \
-        || curl https://raw.githubusercontent.com/${author}/${repo}/master/${file}.js --output /config/www/${file}.js --fail \
+        curl https://raw.githubusercontent.com/${author}/${repo}/sitayo/dist/${file}.js --output /config/www/${file}.js --fail \
+        || curl https://raw.githubusercontent.com/${author}/${repo}/sitayo/${file}.js --output /config/www/${file}.js --fail \
         || curl -L https://github.com/${author}/${repo}/releases/latest/download/${file}.js --output /config/www/${file}.js --fail \
         || curl -L https://github.com/${author}/${repo}/releases/latest/download/${file}-bundle.js --output /config/www/${file}.js --fail
         plugins="${plugins} /local/${file}.js"
